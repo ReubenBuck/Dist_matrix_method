@@ -378,6 +378,48 @@ dev.off()
 
 
 
+# find a way to do a significance test to compare the mean overlap
+
+# wilcoxin signed rank test becausee we are sampling from a distribution and cant be sure if it is normmaly distributed or somthing like that
+
+# paired will be equall to true to get a signed rank test
+
+
+
+# we need to calculate the values for the total amount of overlap.   
+# this approach should clear up the majority of questions about the amount of overlap
+# I can use various species supposedly because im now comparing distributions rather than single numbers and the whole distribtibution will change according to the different species
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

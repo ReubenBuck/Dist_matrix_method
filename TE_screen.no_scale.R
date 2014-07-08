@@ -24,7 +24,7 @@ require(gplots)
 
 setwd("~/Desktop/Dist_matrix_TE_div")
 
-spec1 <- "Mouse"
+spec1 <- "Human"
 if(spec1 == "Mouse"){UCSCspec = "mm10"}
 if(spec1 == "Human"){UCSCspec = "hg19"}
 if(spec1 == "Opossum"){UCSCspec = "monDom5"}
@@ -36,9 +36,9 @@ keep.NG4s = "no"
 keep.NCpGI = "no"
 keep.CpGBP = "no"
 keep.GC = "no"
-SCALE = "yes"
+SCALE = "no"
 
-file_name <- paste(spec1, "_R.cor.cons", "_NGenes.", keep.NGenes ,"_NG4s.", keep.NG4s, "_NCpGI.", keep.NCpGI, "_CpGBP.", keep.CpGBP, "_GC.", keep.GC, "_SCALE.", SCALE,".txt" ,sep="")
+file_name <- paste(spec1, "_R.cor.cons", "_NGenes.", keep.NGenes ,"_NG4s.", keep.NG4s, "_NCpGI.", keep.NCpGI, "_CpGBP.", keep.CpGBP, "_GC.", keep.GC, "_SCALE.", SCALE,"_no_conservation.txt" ,sep="")
 
 # read in the table and seperate out conservation, TE dist, and species comparison
 # make sure each one segregate with the binID
@@ -64,18 +64,19 @@ useful.species1 <- useful.species[!(useful.species == "Platypus")]
 all.species1 <- read.table(paste("r_class_table/", file_name, sep = ""), header = TRUE)
 
 # mobility information
-s1.mob <- all.species1[,c("binID",useful.species)] 
+s1.mob <- all.species1[,c("binID",paste(useful.species, "_r_class", sep =""))] 
 
 #conservation information
-s1.con <- all.species1[,c(1,grep("rate", colnames(all.species1)) , grep("length", colnames(all.species1)))]
+#s1.con <- all.species1[,c(1,grep("rate", colnames(all.species1)) , grep("length", colnames(all.species1)))]
 
 # the TE coordinates and bin information
-s1 <- all.species1[,-(c(grep("rate", colnames(all.species1)) , grep("length", colnames(all.species1))))]
-s1 <- s1[,!(colnames(s1) %in% useful.species)]
-
+#s1 <- all.species1[,-(c(grep("rate", colnames(all.species1)) , grep("length", colnames(all.species1))))]
+s1 <- all.species1
+s1 <- s1[,!(colnames(s1) %in% paste(useful.species, "_r_class", sep =""))]
+s1 <- s1[,!(colnames(s1) %in% paste(useful.species, "_dist_cor", sep =""))]
 
 pca <- list(NULL)
-pca$x <- s1[,5:length(s1)]	
+pca$x <- scale(s1[,5:length(s1)])
 
 
 s1$group = 0
@@ -211,13 +212,11 @@ s1.chr <- GRanges(seqnames = Rle(names(sLengths)),
 
 
 # run the regression stuff from here
-
-useful.species1 <- c("Horse","Dog", "Human", "Rat")
-
+colnames(s1.mob) <- c("binID", useful.species1)
 for(t in useful.species1){
 analysis.spec <- useful.species1[!(useful.species1 == t)]
 
-mob_class <- s1.mob[complete.cases(s1.mob[,c("binID",analysis.spec)]),]
+mob_class <- s1.mob[complete.cases(s1.mob[,c("binID",analysis.spec)]),c("binID",analysis.spec)]
 TE_class <- class[complete.cases(s1.mob[,c("binID",analysis.spec)]),]
 
 # subset the class table by the correct bin ID
@@ -272,6 +271,9 @@ for( i in seq(dim(TE_class)[2]-1)){
 	overlap.pc <- rbind(overlap.pc,no.ol.g)
 	overlap.sd <- rbind(overlap.sd,no.ol.sd)
 	overlap.bin <- rbind(overlap.bin,no.ol.bin)
+	# I don't think our measurment for overlaps is vary good. Probably something like mean pariwise overlaps
+	
+	
 	#plots	
 #	for(x in 1:length(group.sys)){
 #			q <- autoplot((s1.chr),layout = "karyogram",fill = "white", color = "black") 
@@ -284,33 +286,27 @@ for( i in seq(dim(TE_class)[2]-1)){
 #						color = NA,
 #						ylim = c(((y*(10/length(analysis.spec))) - (10/length(analysis.spec))) ,(y*(10/length(analysis.spec)))))
 #			}
-#			q <- q + labs(title = paste("Overlap between", group.sys2[x], names(TE_class)[i],"in", spec1,"regions and", group.sys1[x], "pairwsie mobility" ))				
+#			q <- q + labs(title = paste("Overlap between", group.sys2[x], names(TE_class)[i],"in", #spec1,"regions and", group.sys1[x], "pairwsie mobility" ))				
 #			assign(group.sys[x],q)
 #		}
-#		pdf(file = paste("plot_results/karyotype_plots/",spec1, "_", names(TE_class)[i], ".pdf", sep = ""), onefile=TRUE)
+#		pdf(file = paste("plot_results/karyotype_plots/",spec1, "_", names(TE_class)[i], #"_no_scale.pdf", sep = ""), onefile=TRUE)
 #		print(HH)
 #		print(HL)
 #		print(LH)
 #		print(LL)
-#	dev.off()
-
-	
+#	dev.off()	
 }
 
 colnames(overlap.pc) <- group.sys  
 rownames(overlap.pc) <- names(all.wiggle)
 colnames(overlap.bin) <- group.sys  
 rownames(overlap.bin) <- names(all.wiggle)
-colnames(overlap.sd) <- group.sys  
-rownames(overlap.sd) <- names(all.wiggle)
-
-
 
 
 # probably do a heat map regression analysis 
 # in each species we control for the effect of one of the species
 
-pdf(file = paste("plot_results/TE_heatmap/",spec1, "_", "excluding_", t, ".pdf", sep = ""), onefile=TRUE)
+pdf(file = paste("plot_results/TE_heatmap/",spec1, "_", "excluding_", t, "_no_scale.pdf", sep = ""), onefile=TRUE)
 print(heatmap.2((overlap.pc), 
 		trace = "none", 
 		density.info= "none", 
@@ -325,8 +321,7 @@ print(heatmap.2((overlap.pc),
 		Colv=NA
 		)
 		)
-		
-		print(heatmap.2((overlap.bin), 
+print(heatmap.2((overlap.bin), 
 		trace = "none", 
 		density.info= "none", 
 		margins = c(8,8), 
@@ -340,30 +335,17 @@ print(heatmap.2((overlap.pc),
 		Colv=NA
 		)
 		)
-		
-		print(heatmap.2((overlap.sd), 
-		trace = "none", 
-		density.info= "none", 
-		margins = c(8,8), 
-		main = paste(spec1, "TE regions\n overlaped with pairwise\n mobility, excluding , bin no",t ), 
-		xlab = "TE mobility / TE level", 
-		ylab = "TE", 
-		#breaks=seq(from=0, to=1, by=.01), 
-		scale = "none",
-		symbreaks=F,
-		symkey=T,
-		Colv=NA
-		)
-		)
-
 
 dev.off()
 
-#heatmap.2(cor(s1[,5:(length(s1) - 2)], replot_s1_s2[,2:length(replot_s1_s2)]), trace = "none",margins = c(8,8), xlab = spec2, ylab = spec1, main = "TE corelations between species", col = redgreen, scale = ("none"), symbreaks=TRUE, density.info= "none", breaks=seq(from=-1, to=1, by=.01), symkey=TRUE)
-
-
-
 }
+
+
+
+
+
+
+
 
 
 
