@@ -212,7 +212,21 @@ s1.chr <- GRanges(seqnames = Rle(names(sLengths)),
 
 
 # run the regression stuff from here
+
+
+
+
+
+
+
+
+
+
+
+
+useful.species1 <- c("Horse","Dog", "Bovine", "Mouse", "Opossum")
 colnames(s1.mob) <- c("binID", useful.species1)
+
 for(t in useful.species1){
 analysis.spec <- useful.species1[!(useful.species1 == t)]
 
@@ -224,18 +238,35 @@ TE_class <- class[complete.cases(s1.mob[,c("binID",analysis.spec)]),]
 overlap.pc <- NULL
 overlap.sd <- NULL
 overlap.bin <- NULL
+overlap.wi <- NULL
+overlap.bs <- NULL
+overlap.di <- NULL
+overlap.med <- NULL
 for( i in seq(dim(TE_class)[2]-1)){
 	
 	
 	group.sys <- c("HH", "HL", "LH" , "LL")
 	group.sys1 <- c("H", "H", "L" , "L")
 	group.sys2 <- c("H", "L", "H" , "L")
+	
+	# make total mob overlaps here
+	for(o in analysis.spec){
+		for(p in 1:4){
+			# remember that the TE_class object is irrelevent, it is hust where the binIDs are
+			assign(paste(o,".",group.sys1[p],"O", sep =""),  (TE_class[(mob_class[,o] == group.sys1[p]),"binID"]))
+		}		
+	}
+	
+	# we don't do total TE overlaps because we are looking through the window of one species
+	# food for thought is what if we were to include the remodeled TE distributions from the dist analysis
+		
+	# make TE overlaps here
 	for(o in analysis.spec){
 		for(p in 1:4){
 			assign(paste(o,".",group.sys[p], sep =""),  (TE_class[(mob_class[,o] == group.sys1[p]) & (TE_class[,i] == group.sys2[p]),"binID"]))
 		}		
 	}
-	
+
 	#pairwise comparisons to be made
 	spec.no <- 1:length(analysis.spec)
 	pairs <- NULL
@@ -244,18 +275,42 @@ for( i in seq(dim(TE_class)[2]-1)){
 	}
 	
 	pairs <- data.frame(pair.1 = analysis.spec[pairs[,1]], pair.2 = analysis.spec[pairs[,2]])
-
+	
+	
+	# once i have pairs data i can get the totals 
+	# this thing has to split into high and low
+	# it already is, I just need to have four coppies of the distribtuion
+	
+	
+	
+	# get the TE overlaps here
 	no.ol.g <- NULL
 	no.ol.sd <- NULL
 	no.ol.bin <- NULL
+	no.ol.w <- NULL
+	no.ol.bin.sd <- NULL 
+	no.ol.d <- NULL
+	no.ol.med <- NULL
 	for(z in seq(length(group.sys))){
 		
-		
+		bins.no.o <- NULL
+		for(x in 1:dim(pairs)[1]){
+			bins <- length(get(paste(pairs[x,"pair.1"], ".", group.sys1[z],"O", sep = "")))
+			bins.no.o <- c(bins.no.o, bins)
+		}
+
 		bins.no <- NULL
 		for(x in 1:dim(pairs)[1]){
 			bins <- length(get(paste(pairs[x,"pair.1"],group.sys[z], sep = ".")))
 			bins.no <- c(bins.no, bins)
 		}
+		
+		intersect.no.o <- NULL
+		for(x in 1:dim(pairs)[1]){
+			intersect <- length(intersect(get(paste(pairs[x,"pair.1"], ".", group.sys1[z],"O", sep = "")), get(paste(pairs[x,"pair.2"], ".", group.sys1[z],"O", sep = ""))))
+			intersect.no.o <- c(intersect.no.o, intersect)
+		}
+
 		
 		intersect.no <- NULL
 		for(x in 1:dim(pairs)[1]){
@@ -263,18 +318,26 @@ for( i in seq(dim(TE_class)[2]-1)){
 			intersect.no <- c(intersect.no, intersect)
 		}
 		
-		no.OL <- mean(intersect.no / bins.no)
-		no.ol.g <- c(no.ol.g, no.OL)
+		Wil <- wilcox.test(intersect.no.o / bins.no.o,intersect.no / bins.no, paired= TRUE)
+		
+		no.ol.w <- c(no.ol.w, Wil$p.value)
+		no.ol.d <- c(no.ol.d, mean(intersect.no / bins.no) - mean(intersect.no.o / bins.no.o))
+		no.ol.g <- c(no.ol.g, mean(intersect.no / bins.no))
 		no.ol.sd <- c(no.ol.sd, sd(intersect.no / bins.no))
 		no.ol.bin <- c(no.ol.bin, mean(bins.no))
+		no.ol.bin.sd <- c(no.ol.bin.sd, sd(bins.no))
+		no.ol.med <- c(no.ol.med, median(intersect.no / bins.no) - median(intersect.no.o / bins.no.o))
 	}
+	overlap.wi <- rbind(overlap.wi, no.ol.w)
 	overlap.pc <- rbind(overlap.pc,no.ol.g)
 	overlap.sd <- rbind(overlap.sd,no.ol.sd)
 	overlap.bin <- rbind(overlap.bin,no.ol.bin)
-	# I don't think our measurment for overlaps is vary good. Probably something like mean pariwise overlaps
-	
-	
+	overlap.bs <- rbind(overlap.bs,no.ol.bin.sd)
+	overlap.di <- rbind(overlap.di,no.ol.d )
+	overlap.med <- rbind(overlap.med,no.ol.med )
 	#plots	
+	
+	#karyotype plots
 #	for(x in 1:length(group.sys)){
 #			q <- autoplot((s1.chr),layout = "karyogram",fill = "white", color = "black") 
 #			for(y in 1:length(analysis.spec)){
@@ -295,233 +358,136 @@ for( i in seq(dim(TE_class)[2]-1)){
 #		print(LH)
 #		print(LL)
 #	dev.off()	
+
+	
 }
 
 colnames(overlap.pc) <- group.sys  
 rownames(overlap.pc) <- names(all.wiggle)
 colnames(overlap.bin) <- group.sys  
 rownames(overlap.bin) <- names(all.wiggle)
-
+colnames(overlap.sd) <- group.sys  
+rownames(overlap.sd) <- names(all.wiggle)
+colnames(overlap.wi) <- group.sys  
+rownames(overlap.wi) <- names(all.wiggle)
+colnames(overlap.bs) <- group.sys  
+rownames(overlap.bs) <- names(all.wiggle)
+colnames(overlap.di) <- group.sys  
+rownames(overlap.di) <- names(all.wiggle)
+colnames(overlap.med) <- group.sys  
+rownames(overlap.med) <- names(all.wiggle)
 
 # probably do a heat map regression analysis 
 # in each species we control for the effect of one of the species
 
+
+makeRects <- function(tfMat,border){
+   cAbove = expand.grid(1:dim(overlap.wi)[1],1:dim(overlap.wi)[2]) #[tfMat,]
+   cAbove = cAbove[tfMat,]
+   cAbove <- cAbove[,c("Var2", "Var1")]
+   cAbove[,2] <- dim(overlap.wi)[1] - cAbove[,2] + 1
+   xl=cAbove[,1]-0.49
+   yb=cAbove[,2]-0.49
+   xr=cAbove[,1]+0.49
+   yt=cAbove[,2]+0.49
+   rect(xl,yb,xr,yt,border=border,lwd=3)
+ }
+
+sig1 <- overlap.wi<.05 & overlap.wi >=.01
+sig2 <- overlap.wi<.01 & overlap.wi >=.001
+sig3 <- overlap.wi<.001
+
+overlap.bin <- data.frame(overlap.bin)
+overlap.bs <- data.frame(overlap.bs)
+bin.numbers <- data.frame(HH_bin_mean = overlap.bin$HH,
+						  HH_bin_sd = overlap.bs$HH,
+						  HL_bin_mean = overlap.bin$HL,
+						  HL_bin_sd = overlap.bs$HL,
+						  LH_bin_mean = overlap.bin$LH,
+						  LH_bin_sd = overlap.bs$LH,
+						  LL_bin_mean = overlap.bin$LL,
+						  LL_bin_sd = overlap.bs$LL)
+rownames(bin.numbers) <- rownames(overlap.bs)
+
+
 pdf(file = paste("plot_results/TE_heatmap/",spec1, "_", "excluding_", t, "_no_scale.pdf", sep = ""), onefile=TRUE)
+par(mfrow=c(1,1))
 print(heatmap.2((overlap.pc), 
 		trace = "none", 
 		density.info= "none", 
 		margins = c(8,8), 
-		main = paste(spec1, "TE regions\n overlaped with pairwise\n mobility, excluding",t ), 
 		xlab = "TE mobility / TE level", 
 		ylab = "TE", 
 		breaks=seq(from=0, to=1, by=.01), 
 		scale = "none",
-		symbreaks=F,
+		symbreaks=T,
 		symkey=T,
 		Colv=NA
 		)
 		)
-print(heatmap.2((overlap.bin), 
-		trace = "none", 
-		density.info= "none", 
-		margins = c(8,8), 
-		main = paste(spec1, "TE regions\n overlaped with pairwise\n mobility, excluding , bin no",t ), 
-		xlab = "TE mobility / TE level", 
-		ylab = "TE", 
-		#breaks=seq(from=0, to=1, by=.01), 
-		scale = "none",
-		symbreaks=F,
-		symkey=T,
-		Colv=NA
-		)
-		)
+		legend(5,5,NA)
+title(main = paste(spec1, "mean overlap of TE regions\n and pairwise mobility regions"))
+text(.5,.95, label = paste( "excluding",t ))
+ 		
+		
+print(heatmap.2((overlap.di), 
+				trace = "none",
+				margins = c(8,8), 
+				col = redgreen, 
+				scale = "none", 
+				symbreaks=TRUE, 
+				density.info= "none", 
+ 				Colv=NA,
+ 				Rowv = NA,
+				breaks=seq(from=-.3, to=.3, by=.01),
+				symkey=TRUE,
+				xlab = "bin mobility / TE level", 
+				ylab = "TE", 
+ 				add.expr = {makeRects(sig3,"orange");add.expr = makeRects(sig2,"pink");add.expr = makeRects(sig1,"yellow")}
+ 					)
+ 					)
+		legend("topright", c("p < .05", "p < .01", "p < .001"), fill = c("yellow", "pink", "orange"))
+title(main = paste(spec1, "TE regions\n overlaped with pairwise mobility regions"))
+text(.5,.95, label = paste("mean divergence from mean overall,\n excluding",t ))
+
+
+print(heatmap.2((overlap.med), 
+				trace = "none",
+				margins = c(8,8), 
+				col = redgreen, 
+				scale = "none", 
+				symbreaks=TRUE, 
+				density.info= "none", 
+ 				Colv=NA,
+ 				Rowv = NA,
+				#breaks=seq(from=-.3, to=.3, by=.01),
+				symkey=TRUE,
+				xlab = "bin mobility / TE level", 
+				ylab = "TE", 
+ 				add.expr = {makeRects(sig3,"orange");add.expr = makeRects(sig2,"pink");add.expr = makeRects(sig1,"yellow")}
+ 					)
+ 					)
+		legend("topright", title = "wilcoxon test",c("p < .05", "p < .01", "p < .001"), fill = c("yellow", "pink", "orange"))
+title(main = paste(spec1, "TE regions\n overlaped with pairwise mobility regions"))
+text(.5,.95, label = paste("median divergence from median overall,\n excluding",t ))
+
+
+
+par(mfrow=c(2,1))
+
+textplot(signif(bin.numbers[,1:4], digits = 3), mar=c(0, 0, 3, 0), main = "hmm")
+title(main = "bin numbers in each overlap")
+textplot(signif(bin.numbers[,5:8], digits = 3), mar=c(3,0, 0, 0),)
+
+
 
 dev.off()
 
+
 }
 
 
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-p.var <- names(class)
-
-xlab <- "TE"
-ylab <- "proportion of bins that overlap between two species in each TE level group"
-main <- "proportion of overlap for each level of organisation for each level of each TE"
-
-barplot(overlap.pc)
-
-barplot(c(overlap.pc[,2],overlap.pc[,1],overlap.pc[,3],overlap.pc[,4]), col = c(2,1,3,4), xlab = xlab, ylab = ylab, main = main, ylim = c(0,1))
-points(overlap.pc[,1], col = 1)
-points(overlap.pc[,3], col = 3)
-points(overlap.pc[,4], col = 4)
-
-
-barplot(t(overlap.pc), col = c(1,2,3,4), cex.names = .3, )
-legend("topright",group.sys, fill = c(1,2,3,4))
-
-heatmap(cor(data.frame(p.var,overlap.pc)), scale = "none")
-
-# also lets see whats happening with phastcon scores
-
-
-# the correlation between species at a PC
-
-barplot(t(overlap.pc[,1]), col = c(1), cex.names = .5, las = 2, beside = TRUE)
-barplot(t(overlap.pc[,2]), col = c(2), cex.names = .5, las = 2, beside = TRUE)
-barplot(t(overlap.pc[,3]), col = c(3), cex.names = .5, las = 2, beside = TRUE)
-barplot(t(overlap.pc[,4]), col = c(4), cex.names = .5, las = 2, beside = TRUE)
-
-barplot(t(overlap.pc), col = c(1,2,3,4), cex.names = .5, las = 2, beside = FALSE)
-
-
-plot(hclust(dist(overlap.pc)))
-
-# seperate things into three groups 
-# ances   SL    erv
-
-
-ances <- overlap.pc[c('SINE2_MIR', 'LINE_Other', 'LINE_L2', 'DNA_All', 'LINE_CR1'),]
-SL <-  overlap.pc[c('SINE1_7SL', 'GC', 'NGenes', 'NCpGI', 'SINE_Other', 'ERV_ERV2', 'LINE_L1'),]
-erv <- overlap.pc[c('LTR_All', 'ERV3_MaLR', 'ERV_Other', 'ERV_ERV1', 'ERV_ERV3'),]
-
-
-dat_mean<- matrix(nrow = 4, ncol = 3)
-colnames(dat_mean) = c("ances", "SL", "erv")
-rownames(dat_mean) = c("HH","HL", "LH", "LL")
-
-for(i in colnames(dat_mean)){
-	for(z in rownames(dat_mean)){
-		m_cal <- get(i)
-		
-		dat_mean[z,i] <- mean(m_cal[,z])
-	}
-}
-
-
-dat_var<- matrix(nrow = 4, ncol = 3)
-colnames(dat_var) = c("ances", "SL", "erv")
-rownames(dat_var) = c("HH","HL", "LH", "LL")
-
-for(i in colnames(dat_var)){
-	for(z in rownames(dat_var)){
-		v_cal <- get(i)
-		
-		dat_var[z,i] <- sd(v_cal[,z])
-	}
-}
-
-dat_median<- matrix(nrow = 4, ncol = 3)
-colnames(dat_median) = c("ances", "SL", "erv")
-rownames(dat_median) = c("HH","HL", "LH", "LL")
-
-for(i in colnames(dat_median)){
-	for(z in rownames(dat_median)){
-		m_cal <- get(i)
-		
-		dat_median[z,i] <- median(m_cal[,z])
-	}
-}
-
-
-
-
-heatmap(dat_mean, scale= "none")
-
-library(gplots)
-heatmap.2((dat_mean), trace = "none", col = redgreen, density.info= "none",Rowv=NA, Colv=NA, margins = c(8,8))
-heatmap.2((dat_median), trace = "none", col = redgreen, density.info= "none",Rowv=NA, Colv=NA, margins = c(8,8))
-
-
-# what is the total level of conservation for various regions of organisation
-
-Bov.HO <- as.integer(rownames(all.spec[(all.spec$Bovine_r_class == "H"),]))
-Mou.HO <- as.integer(rownames(all.spec[(all.spec$Mouse_r_class == "H"),]))
-Dog.HO <- as.integer(rownames(all.spec[(all.spec$Dog_r_class == "H"),]))
-
-Bov.LO <- as.integer(rownames(all.spec[(all.spec$Bovine_r_class == "L"),]))
-Mou.LO <- as.integer(rownames(all.spec[(all.spec$Mouse_r_class == "L"),]))
-Dog.LO <- as.integer(rownames(all.spec[(all.spec$Dog_r_class == "L"),]))
-
-
-	group.sys <- c("HO", "LO")
-	class.2 <- c("H", "L", "H", "L")
-	no.ol.g <- NULL
-	for(z in seq(length(group.sys))){
-		#ln.pc.cla <- length(class[class[,i] == class.2[z],i])
-		B <- get(paste("Bov.",group.sys[z], sep = ""))
-		M <- get(paste("Mou.",group.sys[z], sep = ""))
-		D <- get(paste("Dog.",group.sys[z], sep = ""))
-		BM <- B[B%in%M]
-		MB <- M[M%in%B]
-		DM <- D[D%in%M]
-		MD <- M[M%in%D]
-		BD <- B[B%in%D]
-		DB <- D[D%in%B]
-		no.OL <- sum(length(unique(c(BM,MB))),  length(unique(c(DM,MD))), length(unique(c(BD,DB)))) / sum(length(B), length(M), length(D))
-		no.ol.g <- c(no.ol.g, no.OL)
-	}
-T.percent.ol <- no.ol.g
-#names(T.percent.ol) <- c("HO","LO")
-
-
-dat_mean2 <- as.data.frame(dat_mean)
-dat_mean2$total <- c(rep(T.percent.ol[1],2),rep(T.percent.ol[2],2))
-heatmap.2(as.matrix(dat_mean2[1:2,]), trace = "none", col = redgreen, density.info= "none",Rowv=NA, Colv=NA, margins = c(8,8))
-heatmap.2(as.matrix(dat_mean2[3:4,]), trace = "none", col = redgreen, density.info= "none",Rowv=NA, Colv=NA, margins = c(8,8))
-
-
-par(mfrow=c(2,2))
-boxplot(ances[,'HH'], SL[,'HH'], erv[,'HH'], main = "HH", names = c("ances", "SL", "erv"))
-abline(h = T.percent.ol[1], col = 2)
-boxplot(ances[,'HL'], SL[,'HL'], erv[,'HL'], main = "HL", names = c("ances", "SL", "erv"))
-abline(h = T.percent.ol[1], col = 2)
-boxplot(ances[,'LH'], SL[,'LH'], erv[,'LH'], main = "LH", names = c("ances", "SL", "erv"))
-abline(h = T.percent.ol[2], col = 3)
-boxplot(ances[,'LL'], SL[,'LL'], erv[,'LL'], main = "LL", names = c("ances", "SL", "erv"))
-abline(h = T.percent.ol[2], col = 3)
-
-
-
-#probably do some venn diagrams next to see how exclusive each group is
-
-# what are the parts that could be overlaping
-# should i just get the numbers for everyhting and stick them in a big venn diagram 
-library("VennDiagram")
-
-# probably need to get the union of all the elements in the same groups
-
-
-
-p1 <- qplot(x = mpg, y= cyl, data = mtcars, color = carb)
-p2 <- qplot(x = mpg, y= cyl, data = mtcars, color = wt)
-p3 <- qplot(x = mpg, y= cyl, data = mtcars, color = qsec)
-p4 <- qplot(x = mpg, y= cyl, data = mtcars, color = gear)
-arrangeGrobByParsingLegend(p1, p2, p3, p4)
-arrangeGrobByParsingLegend(p1, p2, p3, p4, ncol = 1)
-arrangeGrobByParsingLegend(p1, p2, p3, p4, legend.idx = 2)
 
