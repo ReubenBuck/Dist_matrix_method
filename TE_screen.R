@@ -253,6 +253,7 @@ for( i in seq(dim(TE_class)[2]-1)){
 	for(o in analysis.spec){
 		for(p in 1:4){
 			assign(paste(o,".",group.sys[p], sep =""),  (TE_class[(mob_class[,o] == group.sys1[p]) & (TE_class[,i] == group.sys2[p]),"binID"]))
+			assign(paste(o,".",group.sys[p],".",names(TE_class)[i], sep =""),  (TE_class[(mob_class[,o] == group.sys1[p]) & (TE_class[,i] == group.sys2[p]),"binID"]))
 		}		
 	}
 
@@ -484,9 +485,6 @@ dev.off()
 
 
 
-
-
-
 # what about a really large venn diagram, every thing should be in object from floating around it wouldnt be too hard to actually do a venn diagram
 
 # I could get everything and put it in a list
@@ -504,7 +502,106 @@ dev.off()
 
 
 
+library(VennDiagram)
 
+# so far I loop through TE names and overwirte them. 
+# It wouldnt be to hard to store it into memmory 
+
+# also venn diagram usage is limited
+# what would be good to see is intersections across each TE 
+
+HHHH <- list(Bovine.HH,Mouse.HH,Horse.HH, Dog.HH,Bovine.LH)
+venn(HHHH) 
+fill = c("darkred", "darkblue", "darkgreen","darkyellow"))
+
+
+# calculate the length of the intersect in each case 
+# of course this approach will work
+# the amount that are similar between species one and two 
+# focus on getting all the TE distributions for each species 
+# could put it up above
+
+
+
+
+# now i need a way to get all the intersects
+
+# maybe the expand grid method will get us all the compairsons
+
+
+grid <- expand.grid(names(all.wiggle),names(all.wiggle))
+
+for(s in useful.species1){
+	for(r in group.sys){
+		Sect= NULL
+		for(i in 1:dim(grid)[1]){
+			sect <- length(intersect(get(paste(s,".",r,".",grid[i,1], sep = "")),get(paste(s,".",r,".",grid[i,2], sep = "")))) / length(get(paste(s,".",r,".",grid[i,1], sep = "")))
+			Sect <- c(Sect,sect)
+		}
+		inters <- matrix(data = Sect,nrow = 14, ncol = 14)
+		colnames(inters) <- rownames(inters) <- names(all.wiggle)
+		assign(paste("inters",s,r, sep = "."), inters)
+	}
+}
+
+# if we have to plot this we need to know wchich direction it is going in
+# who are intersexctors and who are intersecties 
+
+
+
+heatmap.2(inters.Dog.LH, scale = "none", density.info = "none", trace = "none", margins = c(8,8))
+
+
+
+
+
+
+
+
+# make a bigger grid
+
+nam <- names(all.wiggle)
+nam2 <- c(paste(".HH.", nam, sep = ""), paste(".HL.", nam, sep = ""), paste(".LH.", nam, sep = ""),paste(".LL.", nam, sep = ""))
+
+
+
+grid <- expand.grid(nam2,nam2)
+
+for(s in useful.species1){
+		Sect= NULL
+		for(i in 1:dim(grid)[1]){
+			sect <- length(intersect(get(paste(s,grid[i,1], sep = "")),get(paste(s,grid[i,2], sep = "")))) / length(get(paste(s,grid[i,1], sep = "")))
+			Sect <- c(Sect,sect)
+		}
+		inters <- matrix(data = Sect,nrow = length(nam2))
+		colnames(inters) <- rownames(inters) <- names(nam2)
+		assign(paste("inters",s,"all", sep = "."), inters)
+}
+
+# if we have to plot this we need to know wchich direction it is going in
+# who are intersexctors and who are intersecties 
+
+heatmap.2(inters, scale = "none", density.info = "none", trace = "none", margins = c(10,10), Colv=NA,Rowv=NA)
+
+
+
+nam <- names(all.wiggle)
+nam2 <- c(paste(".HH.", nam, sep = ""), paste(".HL.", nam, sep = ""), paste(".LH.", nam, sep = ""),paste(".LL.", nam, sep = ""))
+nam3 <- c(paste("Bovine", nam2, sep = ""), paste("Mouse", nam2, sep = ""), paste("Dog", nam2, sep = ""),paste("Horse", nam2, sep = ""))
+
+
+
+grid <- expand.grid(nam3,nam3)
+
+
+		Sect= NULL
+		for(i in 1:dim(grid)[1]){
+			sect <- length(intersect(get(paste(grid[i,1], sep = "")),get(paste(grid[i,2], sep = "")))) / length(get(paste(grid[i,1], sep = "")))
+			Sect <- c(Sect,sect)
+		}
+		inters <- matrix(data = Sect,nrow = length(nam3))
+		colnames(inters) <- rownames(inters) <- nam3
+		assign(paste("inters","all.spec", sep = "."), inters)
 
 
 
