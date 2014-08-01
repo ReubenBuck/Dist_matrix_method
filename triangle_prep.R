@@ -45,14 +45,7 @@ rem.un <- "yes"
 mb <- 1000000
 bin.size = 500000
 
-#which columns to keep 
-#keep.NGenes = "yes"
-#keep.NG4s = "no"
-#keep.NCpGI = "yes"
-#keep.CpGBP = "no"
-#keep.GC = "yes"
-#SCALE = "yes"
-# trying out the unscaled method
+
 keep.NGenes = "no"
 keep.NG4s = "no"
 keep.NCpGI = "no"
@@ -144,197 +137,46 @@ rownames(replot_s1_s2) <- 1:dim(replot_s1_s2)[1]
 rownames(s1) <- 1:dim(s1)[1]
 
 #  data is lodaed in now we can do the merge 
+# read out both species in the correct format 
+# rows are edges 
+# node 1, node 2, edge wight (distance)
+# s1
+# replot_s1_s2
+# expand grid takes evrything
+# maybe combn will get the right coordinates
 
-col.comp <- intersect(colnames(s1) , colnames(replot_s1_s2))
-s1.comp <- s1[,col.comp]
-s2.comp <- replot_s1_s2[,col.comp]	
 
+DistS1 <- dist(s1[5:length(s1)])
+DistS2 <- dist(replot_s1_s2[2:length(replot_s1_s2)])
+# expnad the gird and add the distance scores
 
-# compute actual distances
 
-actual.D <- NULL
-for(i in 1:dim(s1.comp)[1]){
-	D <- dist(rbind(s1.comp[i,], s2.comp[i,]))
-	actual.D<-c(actual.D, as.numeric(D[1]))
-}
+e.grid <- expand.grid(1:length(rownames(as.matrix(DistS1))), 1:length(rownames(as.matrix(DistS1))))
+# rearange the cols and get rid of any that are equal 
 
-dist_s1 <- as.matrix(dist(s1.comp))
-dist_s2 <- as.matrix(dist(s2.comp))
+e.grid <- e.grid[,2:1]
 
 
+com <- t(combn( dim(s1)[1], m = 2))
+com1 <- data.frame(com, as.numeric(DistS1)) 
+com2 <- data.frame(com, as.numeric(DistS2)) 
 
+colnames(com2) <- colnames(com1) <- c(dim(s1)[1], "", "")
+# line 1 has to equal the amount of nodes
 
-##### compute reordered predictor
+path <- "~/Desktop/persistance/"
+write.table(com1, file = paste(path, spec1, "_edges.txt", sep = ""), quote = F, row.names = F, col.names = T)
+write.table(com2, file = paste(path, spec2, "_edges.txt", sep = ""), quote = F, row.names = F, col.names = T)
 
-diff <- sqrt((dist_s1 - dist_s2)^2)
-diff2 <- (dist_s1 - dist_s2)
-COL <- colMeans(diff)
-COL2 <- colSums(diff2)
-pick <- order(COL)
 
-plot(dist_s1[,pick])
-plot(dist_s2[,pick])
 
+# write the table
 
+# we have our list of nodes, that is good
 
 
-##### compute cor predictor
 
 
-cor.all <- cor(dist_s1, dist_s2)
-cor.diag <- rep(0, length(rownames(cor.all)))
-for(i in 1:length(rownames(cor.all))){
-	cor.diag[i] <- cor.all[i,i]
-}
 
 
 
-
-# corelation test
-
-
-
-
-plot((cor.diag),(actual.D))
-cor((cor.diag), actual.D)
-
-plot(COL, actual.D)
-cor((COL),actual.D)
-
-
-
-# then compare the associations of H,M,L regions
-
-# this needs to be done a bit better 
-# I need to gte results for every predictor method 
-
-
-
-distances <- data.frame(scale(data.frame(col = COL,cor = cor.diag,actual = actual.D )))
-
-
-
-s1$group = 0
-group = 0
-for(i in seq(dim(s1)[1])){
-	if(all(s1$start[i] != s1$end[i-1]+1)){
-		group = group+1
-	}
-	s1[i,'group'] <- group
-}
-
-# Now classify bins based the local variance of the scaled_r score
-
-for(o in 1:length(colnames(distances))){
-Wiggle <- NULL
-for(z in seq(group)){
-	# feed the sacled measurments in through here
-	scale_r <- distances[s1$group == z,o] 
-	zero <- rep(0, length(scale_r))
-	wiggle <- data.frame(scale_r_score = zero, mean = zero , bottom = zero , top = zero)
-	for(i in seq(along=scale_r)){	
-		if((i == length(scale_r)) & (i == 1)){
-			a <- mean(scale_r[i])
-			s <- sd(s1$archi.cor.scale)
-			n <- 1
-			error <- qnorm(0.975)*s/sqrt(n)
-			left <- a-error
-			right <- a+error
-		}else if(i == 1){
-			a <- mean(scale_r[i:(i+1)])
-			s <- sd(scale_r[i:(i+1)])
-			n <- 2
-			error <- qnorm(0.975)*s/sqrt(n)
-			left <- a-error
-			right <- a+error
-		}else if(i == length(scale_r)){
-			a <- mean(scale_r[(i-1):i])
-			s <- sd(scale_r[(i-1):i])
-			n <- 2
-			error <- qnorm(0.975)*s/sqrt(n)
-			left <- a-error
-			right <- a+error
-		}else if(i == 2){
-			a <- mean(scale_r[(i-1):(i+1)])
-			s <- sd(scale_r[(i-1):(i+1)])
-			n <- 3
-			error <- qnorm(0.975)*s/sqrt(n)
-			left <- a-error
-			right <- a+error
-		}else if(i == length(scale_r) - 1){
-			a <- mean(scale_r[(i-1):(i+1)])
-			s <- sd(scale_r[(i-1):(i+1)])
-			n <- 3
-			error <- qnorm(0.975)*s/sqrt(n)
-			left <- a-error
-			right <- a+error
-		}else{
-			a <- mean(scale_r[(i-2):(i+2)])
-			s <- sd(scale_r[(i-2):(i+2)])
-			n <- 5
-			error <- qnorm(0.975)*s/sqrt(n)
-			left <- a-error
-			right <- a+error
-		}
-		wiggle$scale_r_score[i] <- scale_r[i]
-		wiggle$mean[i] <- a 
-		wiggle$bottom[i] <- left		
-		wiggle$top[i] <- right
-	}
-	Wiggle <- rbind(Wiggle,wiggle )
-}
-
-
-n1 <- 700
-n2 <- 800
-plot(Wiggle$mean[n1:n2], type = "l")
-lines(Wiggle$top[n1:n2], col = 2)
-lines(Wiggle$bottom[n1:n2], col = 2)
-lines(rep(0,length(n1:n2)), col = 3)
-
-Wiggle$r_class <- rep("M", dim(Wiggle)[1])
-Wiggle$r_class[Wiggle$bottom > 0] <- "H"
-Wiggle$r_class[Wiggle$top < 0] <- "L"
-
-assign(colnames(distances)[o],Wiggle$r_class)
-
-}
-
-
-# now that we have all the regions marked out we can start to identify where some sit
-
-# get the H and L tables
-
-# get the binIDs
-
-
-contingency.tableH <- length(actual[actual == "H"])
-
-length(log.col[pick == actual])
-
-
-d <- data.frame(s1[,5:length(s1)], distances)
-
-
-
-
-
-# It is all about how good we are at identifying regions
-
-
-# probably would be a better idea to add some filtering
-#			select bins that have at least 1 s2 bin that takes up at least 10%
-#           There would probably be a lot more confidence in the final result then. 
-
-
-
-library(ggplot2)
-
-pca <- prcomp(s1[,col.comp], scale.=F)
-
-m <- qplot(pca$x[,1], pca$x[,2], color = log(COL)) 
-
-m + scale_colour_gradient(limits=c(min(log(COL)), 1), low = "green", high = "red")
-
-biplot(pca )
-summary(pca)
