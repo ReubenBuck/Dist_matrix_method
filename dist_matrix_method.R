@@ -9,6 +9,7 @@
 require(rtracklayer)
 require(gplots)
 require(GenomicRanges)
+require(ggplot2)
 rm(list= ls())
 setwd("~/Desktop/Dist_matrix_TE_div/")
 
@@ -21,7 +22,7 @@ spec1 <- "Human"
 if(spec1 == "Mouse"){UCSCspec = "mm10"}
 if(spec1 == "Human"){UCSCspec = "hg19"}
 if(spec1 == "Opossum"){UCSCspec = "monDom5"}
-all.species <- c("Human", "Mouse", "Rat", "Dog", "Bovine", "Horse", "Opossum", "Platypus")
+all.species <- c("Human", "Mouse", "Rat", "Dog", "Bovine", "Horse", "Opossum", "Platypus", "Elephant")
 all.species <- all.species[!all.species == spec1]
 all_sbin <- list.files(path = paste("S_bin/", spec1, "_sbin/", sep = ""))
 useful.species <- NULL
@@ -49,20 +50,13 @@ rem.un <- "yes"
 mb <- 1000000
 bin.size = 500000
 
-#which columns to keep 
-#keep.NGenes = "yes"
-#keep.NG4s = "no"
-#keep.NCpGI = "yes"
-#keep.CpGBP = "no"
-#keep.GC = "yes"
-#SCALE = "yes"
 # trying out the unscaled method
-keep.NGenes = "no"
+keep.NGenes = "yes"
 keep.NG4s = "no"
-keep.NCpGI = "no"
+keep.NCpGI = "yes"
 keep.CpGBP = "no"
 keep.GC = "no"
-SCALE = "no"
+SCALE = "yes"
 
 #create objects into whcih i will store the binsizes
 s1name <- paste("count_tables/",spec1, "_AllBinCounts.txt", sep = "")
@@ -73,18 +67,20 @@ slist <- list(s1,s2)
 
 
 for(i in seq(along=slist)){
-      count <- slist[[i]]
-      count <- count[count$Known >= bin.size,]
-      count[,5:(length(count)-1)] <- (count[,5:(length(count)-1)]/count$Known) * mb   
-      if(SCALE == "yes"){count[,5:(length(count)-1)] <- scale(count[,5:(length(count)-1)])}
-      if(keep.NGenes == "no"){count <- count[,!(colnames(count) == "NGenes")]}
-      if(keep.NG4s ==	"no"){count <- count[,!(colnames(count) == "NG4s")]}
-      if(keep.NCpGI ==	"no"){count <- count[,!(colnames(count) == "NCpGI")]}
-      if(keep.CpGBP  ==	"no"){count <- count[,!(colnames(count) == "CpGBP")]}
-      if(keep.GC ==	"no"){count <- count[,!(colnames(count) == "GC")]}
-      #count <- count[,!(colnames(count) == "Known")]
-      colnames(count)[1:4] <- c("chr", "binID", "start", "end")
-      count$binID <- 1:dim(count)[1]
+	count <- slist[[i]]
+	count <- count[count$Known >= bin.size,]
+	count$GC <- count$GC/count$Known*100
+    count[,5:(length(count)-2)] <- sqrt((count[,5:(length(count)-2)]/count$Known) * mb) 
+    if(keep.NGenes == "no"){count <- count[,!(colnames(count) == "NGenes")]}
+    if(keep.NG4s ==	"no"){count <- count[,!(colnames(count) == "NG4s")]}
+    if(keep.NCpGI ==	"no"){count <- count[,!(colnames(count) == "NCpGI")]}
+    if(keep.CpGBP  ==	"no"){count <- count[,!(colnames(count) == "CpGBP")]}
+    if(keep.GC ==	"no"){count <- count[,!(colnames(count) == "GC")]}
+	if(SCALE == "yes"){count[,5:(length(count)-1)] <- scale(count[,5:(length(count)-1)])}
+
+    #count <- count[,!(colnames(count) == "Known")]
+    colnames(count)[1:4] <- c("chr", "binID", "start", "end")
+    count$binID <- 1:dim(count)[1]
       slist[[i]] <- count
 }
 
@@ -148,13 +144,36 @@ S1_s2_dist <- dist(replot_s1_s2[,2:length(replot_s1_s2)])
 
 S1.dist.m <- as.matrix(S1_dist)
 S1_s2.dist.m <- as.matrix(S1_s2_dist)
-cor.all <- cor(S1.dist.m,S1_s2.dist.m)
-cor.diag <- rep(0, length(rownames(cor.all)))
-for(i in 1:length(rownames(cor.all))){
-	cor.diag[i] <- cor.all[i,i]
-}
-s1$archi.cor.scale <- scale(cor.diag)
 
+# so here is where i try to catch the percentage diference 
+
+# what abuut a paired T.test
+Ttest <- data.frame(P_val = rep(0, dim(S1.dist.m)[1]), mean_diff = rep(0, dim(S1.dist.m)[1]))
+for(t in 1:dim(S1.dist.m)[1]){
+	tt <- t.test(S1_s2.dist.m[t,], S1.dist.m[t,], paired = T)
+	Ttest[t,"P_val"] <- tt$p.value
+	Ttest[t,"mean_diff"] <- tt$estimate
+}
+
+Class2 <- rep(0, dim(S1.dist.m)[1])
+Class2[Ttest$mean_diff > 0] <- "H"
+Class2[Ttest$mean_diff < 0] <- "L"
+Class2[Ttest$P_val > 0.00001] <- "M"
+
+
+colours2 <- rep("1", length(Class2))
+colours2[Class2 == "H"] <- 2
+colours2[Class2 == "L"] <- 3
+
+
+# the diff calculator 
+diff <- sqrt((S1_s2.dist.m-S1.dist.m)^2)
+diff <- colMeans(diff, na.rm = T)
+
+diff <- colMeans(S1_s2.dist.m) - colMeans(S1.dist.m)
+
+
+s1$archi.cor.scale <- diff
 
 # seperate genome into contigous sections
 
@@ -227,16 +246,17 @@ for(z in seq(group)){
 }
 
 
-n1 <- 700
-n2 <- 800
+n1 <- 1000
+n2 <- 1100
 plot(Wiggle$mean[n1:n2], type = "l")
 lines(Wiggle$top[n1:n2], col = 2)
 lines(Wiggle$bottom[n1:n2], col = 2)
 lines(rep(0,length(n1:n2)), col = 3)
+lines(Wiggle$scale_r_score, col = 4, type = "l")
 
 Wiggle$r_class <- rep("M", dim(Wiggle)[1])
-Wiggle$r_class[Wiggle$bottom > 0] <- "L"
-Wiggle$r_class[Wiggle$top < 0] <- "H"
+Wiggle$r_class[Wiggle$bottom > 0] <- "H"
+Wiggle$r_class[Wiggle$top < 0] <- "L"
 
 
 
@@ -246,23 +266,29 @@ s1.re.pca <- prcomp(replot_s1_s2[2:(length(replot_s1_s2))], scale.=TRUE)
 s2.pca <- prcomp(s2[5:(length(s2))], scale.=TRUE)
 
 
+qplot(s1.pca$x[,1], s1.pca$x[,2], color = Ttest[,2]) + scale_colour_gradient2(low=("green"), high=("red"), limits = c(-5,5))
+qplot(s1.re.pca$x[,1], s1.re.pca$x[,2], color = Ttest[,2]) + scale_colour_gradient2(low=("green"), high=("red"), limits = c(-5,5))
 
 colours <- rep("1", dim(Wiggle)[1])
 colours[Wiggle$r_class == "H"] <- 2
 colours[Wiggle$r_class == "L"] <- 3
 
-#pdf(file = paste("plot_results/", spec1, "_in_", spec2,"_NGenes.", keep.NGenes ,"_NG4s.", keep.NG4s, "_NCpGI.", keep.NCpGI, "_CpGBP.", keep.CpGBP, "_GC.", keep.GC, "_SCALE.", SCALE,".pdf" ,sep = ""), onefile = TRUE)
-#plot(s1.re.pca$x[,1], s1.re.pca$x[,2], col = colours, pch = 16, cex = .5, main = paste(spec1 ," in ", spec2," pairwise distance cor", sep = ""))
-#biplot(s1.re.pca, xlabs=rep(".", dim(s1.re.pca$x)[1]), cex = c(2,1), main = paste(spec1 ," in ", spec2," biplot", sep = ""))
-#biplot(s2.pca, xlabs=rep(".", dim(s2.pca$x)[1]), cex = c(2,1), main = paste(spec2 ," biplot", sep = ""))
-#plot(s1.pca$x[,1], s1.pca$x[,2], col = colours, pch = 16, cex = .5, main = paste(spec1 ," pairwise distance cor", sep = ""))
-#biplot(s1.pca, xlabs=rep(".", dim(s1.pca$x)[1]), cex = c(2,1), main = paste(spec1 ," biplot", sep = ""))
-#heatmap.2(cor(s1[,5:(length(s1) - 2)], replot_s1_s2[,2:length(replot_s1_s2)]), trace = "none",margins = c(8,8), xlab = spec2, ylab = spec1, main = "TE corelations between species", col = redgreen, scale = ("none"), symbreaks=TRUE, density.info= "none", breaks=seq(from=-1, to=1, by=.01), symkey=TRUE)
-#heatmap.2(cor(s1[,5:(length(s1) - 2)]), trace = "none",margins = c(8,8), main = paste("TE corelations in",spec1,sep=" "), col = redgreen, scale = ("none"), symbreaks=TRUE, density.info= "none", breaks=seq(from=-1, to=1, by=.01), symkey=TRUE)
-#heatmap.2(cor(s2[,5:(length(s2))]), trace = "none",margins = c(8,8), main = paste("TE corelations in",spec2,sep=" "), col = redgreen, scale = ("none"), symbreaks=TRUE, density.info= "none", breaks=seq(from=-1, to=1, by=.01), symkey=TRUE)
-#dev.off()
+plot(s1.pca$x[colours != "1",1:2], col = as.numeric(colours)[colours != "1"], pch = 16 , cex = .5)
 
-R_info <- data.frame(s1$binID,Wiggle$r_class, cor.diag)
+pdf(file = paste("plot_results/pairwise_comp/", spec1, "_in_", spec2,"_NGenes.", keep.NGenes ,"_NG4s.", keep.NG4s, "_NCpGI.", keep.NCpGI, "_CpGBP.", keep.CpGBP, "_GC.", keep.GC, "_SCALE.", SCALE,"_NEG_dif_cols.pdf" ,sep = ""), onefile = TRUE)
+qplot(s1.pca$x[,1], s1.pca$x[,2], color = Ttest[,2]) + scale_colour_gradient2(low=("green"), high=("red"), limits = c(-5,5))
+qplot(s1.re.pca$x[,1], s1.re.pca$x[,2], color = Ttest[,2]) + scale_colour_gradient2(low=("green"), high=("red"), limits = c(-5,5))
+plot(s1.re.pca$x[,1], s1.re.pca$x[,2], col = colours, pch = 16, cex = .5, main = paste(spec1 ," in ", spec2," pairwise distance cor", sep = ""))
+biplot(s1.re.pca, xlabs=rep(".", dim(s1.re.pca$x)[1]), cex = c(2,1), main = paste(spec1 ," in ", spec2," biplot", sep = ""))
+biplot(s2.pca, xlabs=rep(".", dim(s2.pca$x)[1]), cex = c(2,1), main = paste(spec2 ," biplot", sep = ""))
+plot(s1.pca$x[,1], s1.pca$x[,2], col = colours, pch = 16, cex = .5, main = paste(spec1 ," pairwise distance cor", sep = ""))
+biplot(s1.pca, xlabs=rep(".", dim(s1.pca$x)[1]), cex = c(2,1), main = paste(spec1 ," biplot", sep = ""))
+heatmap.2(cor(s1[,5:(length(s1) - 2)], replot_s1_s2[,2:length(replot_s1_s2)]), trace = "none",margins = c(8,8), xlab = spec2, ylab = spec1, main = "TE corelations between species", col = redgreen, scale = ("none"), symbreaks=TRUE, density.info= "none", breaks=seq(from=-1, to=1, by=.01), symkey=TRUE)
+heatmap.2(cor(s1[,5:(length(s1) - 2)]), trace = "none",margins = c(8,8), main = paste("TE corelations in",spec1,sep=" "), col = redgreen, scale = ("none"), symbreaks=TRUE, density.info= "none", breaks=seq(from=-1, to=1, by=.01), symkey=TRUE)
+heatmap.2(cor(s2[,5:(length(s2))]), trace = "none",margins = c(8,8), main = paste("TE corelations in",spec2,sep=" "), col = redgreen, scale = ("none"), symbreaks=TRUE, density.info= "none", breaks=seq(from=-1, to=1, by=.01), symkey=TRUE)
+dev.off()
+
+R_info <- data.frame(s1$binID,Wiggle$r_class, diff)
 names(R_info) <- c("s1.binID", paste(useful.species[x], "r_class", sep ="_"), paste(useful.species[x], "dist_cor", sep ="_"))
 R_classes <- c(R_classes, list(R_info))
 
