@@ -251,16 +251,22 @@ A.L.u <- A.L.u[order(A.L.u)]
 A.L.i <- intersect(class[class[c("LINE_L2")] == "L","binID"], class[class[c("SINE2_MIR")] == "L","binID"])
 A.L.i <- A.L.i[order(A.L.i)]
 
-R.S.1 <- sample(IDs,length(A.H.u))
+A.M.i <- intersect(class[class[c("LINE_L2")] == "M","binID"], class[class[c("SINE2_MIR")] == "M","binID"])
+A.M.i <- A.M.i[order(A.M.i)]
+
+IDs.m <- union(class[class[c("LINE_L2")] == "M","binID"], class[class[c("SINE2_MIR")] == "M","binID"])
+
+
+set.seed(1929198690); R.S.1 <- sample(IDs.m,length(A.H.u))
 R.S.1 <- R.S.1[order(R.S.1)]
-R.S.2 <- sample(IDs,length(A.H.i))
+set.seed(1199349498); R.S.2 <- sample(IDs.m,length(A.H.i))
 R.S.2 <- R.S.2[order(R.S.2)]
-R.S.3 <- sample(IDs,length(A.L.u))
+set.seed(387212434); R.S.3 <- sample(IDs.m,length(A.L.u))
 R.S.3 <- R.S.3[order(R.S.3)]
-R.S.4 <- sample(IDs,length(A.L.i))
+set.seed(802224694); R.S.4 <- sample(IDs.m,length(A.L.i))
 R.S.4 <- R.S.4[order(R.S.4)]
 
-region <- c("A.H.i", "A.L.i", "A.H.u", "A.L.u", "R.S.1", "R.S.2", "R.S.3", "R.S.4")
+region <- c("A.H.i", "A.L.i", "A.H.u", "A.L.u", "R.S.1", "R.S.2", "R.S.3", "R.S.4", "A.M.i")
 
 
 for(s in c(useful.species, spec1)){
@@ -304,21 +310,17 @@ for(r in region){
 
 pdf(file = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/dendrogram/ancestral.pdf", sep = ""), onefile = T)
 plot(hclust(dist(t(as.matrix(A.H.i_ancestral_movement)[,1:(length(useful.species)+1)+1]))), main = "ancestral",sub = "", xlab = "High MIR/L2 region (intercept)")
-
-plot(hclust(dist(t(as.matrix(A.L.i_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Low MIR/L2 region (intercept)")
-
-plot(hclust(dist(t(as.matrix(R.S.1_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Random sample region 1")
-
 plot(hclust(dist(t(as.matrix(A.H.u_ancestral_movement)[,1:(length(useful.species)+1)+1]))), main = "ancestral",sub = "", xlab = "High MIR/L2 region (union)")
-
+plot(hclust(dist(t(as.matrix(A.L.i_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Low MIR/L2 region (intercept)")
 plot(hclust(dist(t(as.matrix(A.L.u_ancestral_movement)[,1:(length(useful.species)+1)+1]))), main = "ancestral",sub = "", xlab = "Low MIR/L2 region (union)")
-
+plot(hclust(dist(t(as.matrix(R.S.1_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Random sample region 1")
 plot(hclust(dist(t(as.matrix(R.S.2_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Random sample region 2")
 
 plot(hclust(dist(t(as.matrix(R.S.3_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Random sample region 3")
 
 plot(hclust(dist(t(as.matrix(R.S.4_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Random sample region 4")
 
+plot(hclust(dist(t(as.matrix(A.M.i_ancestral_movement)[,1:(length(useful.species)+1)+1]))),  main = "ancestral",sub = "", xlab = "Medium MIR/L2 region (intercept)")
 
 dev.off()
 
@@ -362,6 +364,16 @@ for( s in c(useful.species,spec1)){
 
 
 
+
+for(s in c(useful.species, spec1)){
+	spec <- get(paste("new.", s, sep = ""))
+	spec.pca <- prcomp(spec[,2:length(spec)])	
+	assign(paste(s, ".pca.new", sep = ""), spec.pca)
+}
+
+
+
+
 # so here we are calculating the distances
 
 # So calculate all standardised distances species wise
@@ -370,9 +382,9 @@ for( s in c(useful.species,spec1)){
 
 
 for(s in c(useful.species,spec1)){
-	spec <- get(paste(s,".pca", sep = ""))
-	# we choose 17 becasue 17 is the lowest dimensionality
-	spec <- spec$x[,1:17]
+	spec <- get(paste(s,".pca.new", sep = ""))
+	# we choose 15 becasue 15 is the lowest dimensionality
+	spec <- spec$x[,1:15]
 	Dist <- as.matrix(daisy(spec, stand = FALSE))
 	rownames(Dist) <- colnames(Dist) <- IDs
 	assign(paste(s, "Dists", sep = "."), Dist)
@@ -421,6 +433,10 @@ plot(hclust(dist(t(as.matrix(R.S.1_unknown_movement)[,1:(length(useful.species)+
 plot(hclust(dist(t(as.matrix(R.S.2_unknown_movement)[,1:(length(useful.species)+1)+1]))),main = "edge_length",sub = "", xlab = "Random sample region 2")
 plot(hclust(dist(t(as.matrix(R.S.3_unknown_movement)[,1:(length(useful.species)+1)+1]))),main = "edge_length",sub = "", xlab = "Random sample region 3")
 plot(hclust(dist(t(as.matrix(R.S.4_unknown_movement)[,1:(length(useful.species)+1)+1]))),main = "edge_length",sub = "", xlab = "Random sample region 4")
+
+plot(hclust(dist(t(as.matrix(A.M.i_unknown_movement)[,1:(length(useful.species)+1)+1]))),main = "edge_length",sub = "", xlab = "Medium MIR/L2 region (intercept)")
+
+
 dev.off()
 
 
@@ -432,15 +448,231 @@ dev.off()
 
 
 
+# scale area wont work because you cant use it to plot divergence
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# keep in mind the ordering when using the %in% tool
+# basicly we can't just col bind on it randomly
+
+
+# do every combination and breate a dist matrix out of it so i can cluster on it
+# do the MIR L2 stuff and combine it with the other stuff for each region
+
+BIG.dist <- matrix(nrow = length(c(useful.species,spec1)), ncol = length(c(useful.species,spec1)))
+colnames(BIG.dist) <- rownames(BIG.dist) <- c(useful.species,spec1)
+for(r in region){
+	for(s1 in c(useful.species,spec1)){
+		for(s2 in c(useful.species,spec1)){
+			spec1.a <- get(paste(r, "_ancestral_movement", sep = ""))[s1]
+			spec1.n <- get(paste(r, "_unknown_movement", sep =""))[s1]
+			spec1.m <- as.matrix(cbind(spec1.a, spec1.n))
+			spec2.a <- get(paste(r, "_ancestral_movement", sep = ""))[s2]
+			spec2.n <- get(paste(r, "_unknown_movement", sep =""))[s2]
+			spec2.m <- as.matrix(cbind(spec2.a, spec2.n))
+
+			BIG.dist[s1,s2] <- norm(spec1.m-spec2.m, type="F")
+			
+		}
+	}
+	assign(paste(r,"_distance", sep = ""), as.dist(BIG.dist))
+}
+
+pdf(file = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/dendrogram/merged.pdf", sep = ""), onefile = T)
+plot(hclust(A.H.i_distance), main = "merge",sub = "", xlab = "High MIR/L2 region (intercept)")
+plot(hclust(A.H.u_distance), main = "merge",sub = "", xlab = "High MIR/L2 region (union)")
+plot(hclust(A.L.i_distance), main = "merge",sub = "", xlab = "Low MIR/L2 region (intercept)")
+plot(hclust(A.L.u_distance), main = "merge",sub = "", xlab = "Low MIR/L2 region (union)")
+plot(hclust(R.S.1_distance), main = "merge",sub = "", xlab = "Random sample region 1")
+plot(hclust(R.S.2_distance), main = "merge",sub = "", xlab = "Random sample region 2")
+plot(hclust(R.S.3_distance), main = "merge",sub = "", xlab = "Random sample region 3")
+plot(hclust(R.S.4_distance), main = "merge",sub = "", xlab = "Random sample region 4")
+plot(hclust(A.M.i_distance), main = "merge",sub = "", xlab = "Medium MIR/L2 region (intercept)")
+
+dev.off()
+
+
+
+
+# maybe as a measure of variation
+
+sum(A.H.i_distance)
+sum(A.H.u_distance)
+sum(A.L.i_distance)
+sum(A.L.u_distance)
+
+
+
+
+
+# now all i need is the individual score 
+# a way of scoring them so i can see the movement 
+
+
+
+
+
+# how does the distance from human change over each area
+
+
+# this may be better plotted as a contour map
+
+# so we cna get each distribtuion here and we have the options of selecting the ones we want
+# I just have to look at the titles
+
+for(s in useful.species){
+	thing <- data.frame(ancestral = c(
+										A.H.i_ancestral_movement[,s],
+#										A.H.u_ancestral_movement[,s],
+										A.L.i_ancestral_movement[,s],
+#										A.L.u_ancestral_movement[,s],
+#										R.S.1_ancestral_movement[,s],
+#										R.S.2_ancestral_movement[,s],
+#										R.S.3_ancestral_movement[,s], 
+#										R.S.4_ancestral_movement[,s],
+										A.M.i_ancestral_movement[,s]										
+										), 
+	     				edge_length = c(
+	     								A.H.i_unknown_movement[,s],
+#	     								A.H.u_unknown_movement[,s],
+	     								A.L.i_unknown_movement[,s], 
+#	     								A.L.u_unknown_movement[,s],
+#	     								R.S.1_unknown_movement[,s],
+#	     								R.S.2_unknown_movement[,s],
+#	     								R.S.3_unknown_movement[,s], 
+#	     								R.S.4_unknown_movement[,s],
+	     								A.M.i_unknown_movement[,s]
+	     								),
+		 				 	 region = c(
+		 				 	 			rep("A.H.i", length(A.H.i)),
+#		 				 	 			rep("A.H.u", length(A.H.u)), 
+		 				 	 			rep("A.L.i", length(A.L.i)),
+#		 				 	 			rep("A.L.u", length(A.L.u)),
+#		 				 	 			rep("R.S.1", length(R.S.1)),
+#		 				 	 			rep("R.S.2", length(R.S.2)),
+#		 				 	 			rep("R.S.3", length(R.S.3)), 
+#		 				 	 			rep("R.S.4", length(R.S.4)),
+		 				 	 			rep("A.M.i", length(A.M.i))
+		 				 	 			)
+		 				 )
+	d <- ggplot(thing, aes(ancestral, edge_length, color = region, linetype = region)) + 
+		 geom_density2d() + 
+		 title(main = paste(s, "Divergence from Human"))
+		 
+	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/", s, "_div_from_human.pdf", sep = ""))
+	
+	d <- ggplot(thing, aes(edge_length, color = region, linetype = region)) + 
+		 geom_density() + 
+		 title(main = paste(s, "Divergence from Human")) +
+		 xlab("mean edge length difference from human")
+	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/", s, ".pdf", sep=""))
+	
+	d <- ggplot(thing, aes(sqrt(sqrt((edge_length)^2)), color = region, linetype = region)) + 
+		 geom_density() + 
+		 title(main = paste(s, "Divergence from Human")) +
+		 xlab("mean edge length difference from human")		 
+	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/pos.dist.", s, ".pdf", sep=""))
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Are there any sort of assocaition statisitics we could use to determine what acould be causing the differences
+
+# Once we have a target we can then find a way of confirming it in the real data
+
+
+for(s in useful.species){
+	
+	thing <- data.frame( 
+	     edge_length = c(A.H.i_unknown_movement[,s], A.L.i_unknown_movement[,s], A.H.u_unknown_movement[,s], A.L.u_unknown_movement[,s],
+		 R.S.1_unknown_movement[,s], R.S.2_unknown_movement[,s],R.S.3_unknown_movement[,s],R.S.4_unknown_movement[,s]),
+		 region = c(rep("High MIR/L2 intercept",length(A.H.i)), rep("Low MIR/L2 intercept", length(A.L.i)), rep("High MIR/L2 union",length(A.H.u)), rep("Low MIR/L2 union", length(A.L.u)),
+		 rep("Random sample 1",length(R.S.1)), rep("Random sample 2",length(R.S.2)),rep("Random sample 3",length(R.S.3)),rep("Random sample 4",length(R.S.4)))
+		 )
+	ggplot(thing, aes( edge_length, color = region), xlab = "divergence in mean edge length from human") + geom_density() + ggtitle(s) + xlab("mean edge length difference from human")
+	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/", s, ".pdf", sep=""))
+}
+
+
+
+
+
+# convert distances to positive lengths
+
+
+for(s in useful.species){
+	
+	thing <- data.frame( 
+	     edge_length = c(A.H.i_unknown_movement[,s], A.L.i_unknown_movement[,s], A.H.u_unknown_movement[,s], A.L.u_unknown_movement[,s],
+		 R.S.1_unknown_movement[,s], R.S.2_unknown_movement[,s],R.S.3_unknown_movement[,s],R.S.4_unknown_movement[,s]),
+		 region = c(rep("High MIR/L2 intercept",length(A.H.i)), rep("Low MIR/L2 intercept", length(A.L.i)), rep("High MIR/L2 union",length(A.H.u)), rep("Low MIR/L2 union", length(A.L.u)),
+		 rep("Random sample 1",length(R.S.1)), rep("Random sample 2",length(R.S.2)),rep("Random sample 3",length(R.S.3)),rep("Random sample 4",length(R.S.4)))
+		 )
+		 
+	thing[,1] <- sqrt(thing[,1]^2)
+	
+	ggplot(thing, aes(sqrt(edge_length), color = region), xlab = "divergence in mean edge length from human") + geom_density() + ggtitle(s) + xlab("square root transformed mean edge length difference from human")
+	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/pos.dist.", s, ".pdf", sep=""))
+}
+
+
+
+
+
+
+for(s in useful.species){
+	
+	thing <- data.frame( 
+	     edge_length = c(A.H.i_unknown_movement[,s], A.L.i_unknown_movement[,s], A.H.u_unknown_movement[,s], A.L.u_unknown_movement[,s])		 ,
+		 region = c(rep("High MIR/L2 intercept",length(A.H.i)), rep("Low MIR/L2 intercept", length(A.L.i)), rep("High MIR/L2 union",length(A.H.u)), rep("Low MIR/L2 union", length(A.L.u)))
+		 )
+		 
+	thing[,1] <- sqrt(thing[,1]^2)
+	
+	ggplot(thing, aes(sqrt(edge_length), color = region), xlab = "divergence in mean edge length from human") + geom_density() + ggtitle(s) + xlab("mean edge length difference from human")
+	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/pos.dist.", s, ".pdf", sep=""))
+}
+
+
+
+
+
+
+
 # next step is to introduce some of the ploting techniques i used earlier, just to see what it actually looks like
 # sort of what i had before? maybe human is positioned diferently and the mouse now has more red
 
 
-
-
-
-
-# make all the pca files
 
 # make all the every files
 for(r in region){
@@ -502,194 +734,6 @@ for(r in region){
 		q <- q + labs(title = paste(s, r, sep = "_"))
 		ggsave(file = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/test2/",r,"/", "spec_ancestral_change_", r, "_", s,".pdf", sep = ""))
 	}
-}
-
-
-
-
-# scale area wont work because you cant use it to plot divergence
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# keep in mind the ordering when using the %in% tool
-# basicly we can't just col bind on it randomly
-
-
-# do every combination and breate a dist matrix out of it so i can cluster on it
-# do the MIR L2 stuff and combine it with the other stuff for each region
-
-BIG.dist <- matrix(nrow = length(c(useful.species,spec1)), ncol = length(c(useful.species,spec1)))
-colnames(BIG.dist) <- rownames(BIG.dist) <- c(useful.species,spec1)
-for(r in region){
-	for(s1 in c(useful.species,spec1)){
-		for(s2 in c(useful.species,spec1)){
-			spec1.a <- get(paste(r, "_ancestral_movement", sep = ""))[s1]
-			spec1.n <- get(paste(r, "_unknown_movement", sep =""))[s1]
-			spec1.m <- as.matrix(cbind(spec1.a, spec1.n))
-			spec2.a <- get(paste(r, "_ancestral_movement", sep = ""))[s2]
-			spec2.n <- get(paste(r, "_unknown_movement", sep =""))[s2]
-			spec2.m <- as.matrix(cbind(spec2.a, spec2.n))
-
-			BIG.dist[s1,s2] <- norm(spec1.m-spec2.m, type="F")
-			
-		}
-	}
-	assign(paste(r,"_distance", sep = ""), as.dist(BIG.dist))
-}
-
-pdf(file = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/dendrogram/merged.pdf", sep = ""), onefile = T)
-plot(hclust(A.H.i_distance), main = "merge",sub = "", xlab = "High MIR/L2 region (intercept)")
-plot(hclust(A.L.i_distance), main = "merge",sub = "", xlab = "Low MIR/L2 region (intercept)")
-plot(hclust(R.S.1_distance), main = "merge",sub = "", xlab = "Random sample region 1")
-plot(hclust(A.H.u_distance), main = "merge",sub = "", xlab = "High MIR/L2 region (union)")
-plot(hclust(A.L.u_distance), main = "merge",sub = "", xlab = "Low MIR/L2 region (union)")
-plot(hclust(R.S.2_distance), main = "merge",sub = "", xlab = "Random sample region 2")
-plot(hclust(R.S.3_distance), main = "merge",sub = "", xlab = "Random sample region 3")
-plot(hclust(R.S.4_distance), main = "merge",sub = "", xlab = "Random sample region 4")
-
-
-dev.off()
-
-
-
-
-# maybe as a measure of variation
-
-sum(A.H.i_distance)
-sum(A.H.u_distance)
-sum(A.L.i_distance)
-sum(A.L.u_distance)
-
-
-
-
-
-# now all i need is the individual score 
-# a way of scoring them so i can see the movement 
-
-
-
-
-
-# how does the distance from human change over each area
-
-
-# this may be better plotted as a contour map
-
-pdf(file = "~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/div_from_human.pdf", onefile = T)
-for(s in useful.species){
-	
-	plot(
-		 c(A.H.i_ancestral_movement[,s], A.L.i_ancestral_movement[,s], 
-		 R.S.2_ancestral_movement[,s], R.S.4_ancestral_movement[,s]),
-		 
-		 c(A.H.i_unknown_movement[,s], A.L.i_unknown_movement[,s],
-		 R.S.2_unknown_movement[,s], R.S.4_unknown_movement[,s]),
-		 
-		 col = c(rep(1,length(A.H.i)), rep(2, length(A.L.i)),
-		 rep(3,length(R.S.2)), rep(4, length(R.S.4))),
-		 
-		 pch = 16, cex= .7,
-		 
-		 main = paste(s, "Divergence from Human"),
-		 xlab = "ancestral TE content (MIR/L2)",
-		 ylab = "mean edge length",
-		 xlim = c(-4,4),
-		 ylim = c(-4,4)
-		 )
-	legend("topright" , c("A.H.i", "A.L.i", "R.S.2", "R.S.4"), fill=1:4)
-	}
-dev.off()
-
-
-
-for(s in useful.species){
-	thing <- data.frame(ancestral = c(A.H.i_ancestral_movement[,s], A.L.u_ancestral_movement[,s],
-		 R.S.2_ancestral_movement[,s], R.S.4_ancestral_movement[,s]), 
-	     edge_length = c(A.H.i_unknown_movement[,s], A.L.u_unknown_movement[,s],
-		 R.S.2_unknown_movement[,s], R.S.4_unknown_movement[,s]),
-		 region = c(rep("A.H.i",length(A.H.i)), rep("A.L.u", length(A.L.u)),
-		 rep("R.S.2",length(R.S.2)), rep("R.S.4", length(R.S.4)))
-		 )
-	d <- ggplot(thing, aes(ancestral, edge_length, color = region, linetype = region))+ geom_density2d()
-	d
-	d <- d + title(main = paste(s, "Divergence from Human"))
-	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/", s, "_div_from_human.pdf", sep = ""))
-	d <- NULL
-
-}
-
-
-
-
-# Are there any sort of assocaition statisitics we could use to determine what acould be causing the differences
-
-# Once we have a target we can then find a way of confirming it in the real data
-
-
-for(s in useful.species){
-	
-	thing <- data.frame( 
-	     edge_length = c(A.H.i_unknown_movement[,s], A.L.i_unknown_movement[,s], A.H.u_unknown_movement[,s], A.L.u_unknown_movement[,s],
-		 R.S.1_unknown_movement[,s], R.S.2_unknown_movement[,s],R.S.3_unknown_movement[,s],R.S.4_unknown_movement[,s]),
-		 region = c(rep("High MIR/L2 intercept",length(A.H.i)), rep("Low MIR/L2 intercept", length(A.L.i)), rep("High MIR/L2 union",length(A.H.u)), rep("Low MIR/L2 union", length(A.L.u)),
-		 rep("Random sample 1",length(R.S.1)), rep("Random sample 2",length(R.S.2)),rep("Random sample 3",length(R.S.3)),rep("Random sample 4",length(R.S.4)))
-		 )
-	ggplot(thing, aes( edge_length, color = region), xlab = "divergence in mean edge length from human") + geom_density() + ggtitle(s) + xlab("mean edge length difference from human")
-	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/", s, ".pdf", sep=""))
-}
-
-
-
-
-
-# convert distances to positive lengths
-
-
-for(s in useful.species){
-	
-	thing <- data.frame( 
-	     edge_length = c(A.H.i_unknown_movement[,s], A.L.i_unknown_movement[,s], A.H.u_unknown_movement[,s], A.L.u_unknown_movement[,s],
-		 R.S.1_unknown_movement[,s], R.S.2_unknown_movement[,s],R.S.3_unknown_movement[,s],R.S.4_unknown_movement[,s]),
-		 region = c(rep("High MIR/L2 intercept",length(A.H.i)), rep("Low MIR/L2 intercept", length(A.L.i)), rep("High MIR/L2 union",length(A.H.u)), rep("Low MIR/L2 union", length(A.L.u)),
-		 rep("Random sample 1",length(R.S.1)), rep("Random sample 2",length(R.S.2)),rep("Random sample 3",length(R.S.3)),rep("Random sample 4",length(R.S.4)))
-		 )
-		 
-	thing[,1] <- sqrt(thing[,1]^2)
-	
-	ggplot(thing, aes((edge_length), color = region), xlab = "divergence in mean edge length from human") + geom_density() + ggtitle(s) + xlab("mean edge length difference from human")
-	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/pos.dist.", s, ".pdf", sep=""))
-}
-
-
-
-
-
-
-for(s in useful.species){
-	
-	thing <- data.frame( 
-	     edge_length = c(A.H.i_unknown_movement[,s], A.L.i_unknown_movement[,s], A.H.u_unknown_movement[,s], A.L.u_unknown_movement[,s])		 ,
-		 region = c(rep("High MIR/L2 intercept",length(A.H.i)), rep("Low MIR/L2 intercept", length(A.L.i)), rep("High MIR/L2 union",length(A.H.u)), rep("Low MIR/L2 union", length(A.L.u)))
-		 )
-		 
-	thing[,1] <- sqrt(thing[,1]^2)
-	
-	ggplot(thing, aes((edge_length), color = region), xlab = "divergence in mean edge length from human") + geom_density() + ggtitle(s) + xlab("mean edge length difference from human")
-	ggsave(filename = paste("~/Desktop/Dist_matrix_TE_div/plot_results/edge_species/2d_dist/pos.dist.", s, ".pdf", sep=""))
 }
 
 

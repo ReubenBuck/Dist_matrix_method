@@ -219,6 +219,14 @@ names(CLASS) <- all.species
 # So now i go through the list and get distribtuions of the edge lengths for H and L regions fo the differnt species
 
 
+# maybe we can change this to work on pca
+
+
+
+
+
+
+
 # start by getting the four basic groups
 
 region <- c("A.H.i", "A.L.i", "A.H.u", "A.L.u", "S.1.m", "S.2.m")
@@ -227,13 +235,16 @@ region.u <- region[3:4]
 region.s <- region[5:6]
 
 for(s in all.species){
-	spec <- get(paste(s,"data", sep = "."))
+	spec.te <- get(paste(s,"data", sep = "."))
+	spec.ID <- spec.te[,"binID"]
+	spec <- get(paste(s,"pca", sep = "."))
+	spec <- data.frame(binID = spec.ID ,spec$x[,1:17])
 	cl <- CLASS[[s]]
 	for(r.i in region.i){
 		A <- gsub("A.", "", gsub(".i", "", r.i))
 		A <- intersect(cl$binID[cl$SINE2_MIR == A], cl$binID[cl$LINE_L2 == A])
 		A <- A[order(A)]		
-		assign(paste(r.i, s,sep="_"), spec[spec$binID %in% A,])
+		assign(paste(r.i, s,sep="_"), spec.te[spec.te$binID %in% A,])
 		spec1 <- colMeans(as.matrix(daisy(spec[spec$binID %in% A,2:length(spec)])))
 		spec2 <- colMeans(as.matrix(daisy(spec[spec$binID %in% A,2:length(spec)], stand = TRUE)))
 		assign(paste(r.i, s, "edge_means", sep="_"), spec1)
@@ -244,7 +255,7 @@ for(s in all.species){
 		A <- gsub("A.", "", gsub(".u", "", r.u))
 		A <- union(cl$binID[cl$SINE2_MIR == A], cl$binID[cl$LINE_L2 == A])
 		A <- A[order(A)]		
-		assign(paste(r.u, s,sep="_"), spec[spec$binID %in% A,])	
+		assign(paste(r.u, s,sep="_"), spec.te[spec.te$binID %in% A,])	
 		spec1 <- colMeans(as.matrix(daisy(spec[spec$binID %in% A,2:length(spec)])))
 		spec2 <- colMeans(as.matrix(daisy(spec[spec$binID %in% A,2:length(spec)], stand = TRUE)))
 		assign(paste(r.u, s, "edge_means", sep="_"), spec1)
@@ -254,7 +265,7 @@ for(s in all.species){
 	for(r.s in region.s){
 		A <- sample(cl$binID, 400)
 		A <- A[order(A)]		
-		assign(paste(r.u, s,sep="_"), spec[spec$binID %in% A,])	
+		assign(paste(r.s, s,sep="_"), spec.te[spec.te$binID %in% A,])	
 		spec1 <- colMeans(as.matrix(daisy(spec[spec$binID %in% A,2:length(spec)])))
 		spec2 <- colMeans(as.matrix(daisy(spec[spec$binID %in% A,2:length(spec)], stand = TRUE)))
 		assign(paste(r.s, s, "edge_means", sep="_"), spec1)
@@ -330,11 +341,15 @@ ggplot(thing, aes(edges, color = region)) + geom_density() + ggtitle(s)
 
 # if we do it speices wise, we need to see that the good guys hang with each other and bad guys hang with each other
 # we also need to see more variability in the blue and pirple lines
-r <- "A.L.i"
+r <- "A.H.i"
+
+
 spec.thing.s <- NULL
-for(s in all.species){
-	spec <- data.frame(edges = get(paste(r, s, "edge_means", sep = "_")), species = rep(s,length(get(paste(r, s, "edge_means", sep = "_")))))
-	spec.thing.s <- rbind(spec.thing.s, spec)	
+for(r in region){
+	for(s in all.species){
+		spec <- data.frame(edges = get(paste(r, s, "edge_means", sep = "_")), species = rep(s,length(get(paste(r, s, "edge_means", sep = "_")))), region = rep(r,length(get(paste(r, s, "edge_means", sep = "_")))))
+		spec.thing.s <- rbind(spec.thing.s, spec)	
+	}
 }
 
 
@@ -343,13 +358,14 @@ for(s in all.species){
 
 # somehow to compare the variance would be good
 
+ggplot(spec.thing.s, aes( y = edges, x= species)) + geom_boxplot() + ggtitle(r) + ylim(3,12)
+
+ggplot(spec.thing.s, aes( y = edges, x= region)) + geom_boxplot() + ggtitle(r) + ylim(3,12)
+
+sd(spec.thing.s[,3] == "A.L.i")
 
 
-
-
-ggplot(spec.thing.s, aes( y = edges, x= species)) + geom_boxplot() + ggtitle(r) 
-
-
+# there doesnt seem to be much chane in the variance of pooled smaples
 
 
 # that could be interesting to plot
@@ -367,22 +383,85 @@ points(A[1:90] + runif(90,min=-.2,max=.2), A[1:90] + runif(90,min=-.2,max=.2), c
 
 
 
-plot(rowSums(A.H.i_Bovine[,c("SINE2_MIR", "LINE_L2")]), A.H.i_Bovine_edge_means, ylim = c(0,11))
+plot(rowSums(S.1.m_Bovine[,c("SINE2_MIR", "LINE_L2")]),S.1.m_Bovine_edge_means, ylim = c(0,11))
 
-points(rowSums(A.H.i_Elephant[,c("SINE2_MIR", "LINE_L2")]), A.H.i_Elephant_edge_means, col = 2)
+points(rowSums(A.L.u_Elephant[,c("SINE2_MIR", "LINE_L2")]), A.L.u_Elephant_edge_means, col = 2)
 
-points(rowSums(A.H.i_Dog[,c("SINE2_MIR", "LINE_L2")]), A.H.i_Dog_edge_means, col = 3)
+points(rowSums(A.L.u_Dog[,c("SINE2_MIR", "LINE_L2")]), A.L.u_Dog_edge_means, col = 3)
 
-points(rowSums(A.H.i_Human[,c("SINE2_MIR", "LINE_L2")]), A.H.i_Human_edge_means, col = 4)
+points(rowSums(A.L.u_Human[,c("SINE2_MIR", "LINE_L2")]), A.L.u_Human_edge_means, col = 4)
 
-
-
-
+points(rowSums(A.L.u_Mouse[,c("SINE2_MIR", "LINE_L2")]), A.L.u_Mouse_edge_means, col = 5)
 
 
 
 
 
+plot(c(rowSums(S.1.m_Bovine[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.H.i_Bovine[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.L.i_Bovine[,c("SINE2_MIR", "LINE_L2")])),
+		c(S.1.m_Bovine_edge_means,
+		A.H.i_Bovine_edge_means,
+		A.L.i_Bovine_edge_means), 
+		ylim = c(3,12)
+		)
+
+
+
+
+points(c(rowSums(S.1.m_Human[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.H.i_Human[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.L.i_Human[,c("SINE2_MIR", "LINE_L2")])),
+		c(S.1.m_Human_edge_means,
+		A.H.i_Human_edge_means,
+		A.L.i_Human_edge_means), 
+		col = 2
+		)
+
+
+points(c(
+			rowSums(S.1.m_Mouse[,c("SINE2_MIR", "LINE_L2")]),
+			rowSums(A.H.i_Mouse[,c("SINE2_MIR", "LINE_L2")]),
+			rowSums(A.L.i_Mouse[,c("SINE2_MIR", "LINE_L2")])
+		),
+		c(
+			S.1.m_Mouse_edge_means,
+			A.H.i_Mouse_edge_means,
+			A.L.i_Mouse_edge_means
+		), 
+		col = 3
+		)
+
+points(c(rowSums(S.1.m_Dog[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.H.i_Dog[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.L.i_Dog[,c("SINE2_MIR", "LINE_L2")])),
+		c(S.1.m_Dog_edge_means,
+		A.H.i_Dog_edge_means,
+		A.L.i_Dog_edge_means), 
+		col = 4
+		)
+
+points(c(rowSums(S.1.m_Elephant[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.H.i_Elephant[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.L.i_Elephant[,c("SINE2_MIR", "LINE_L2")])),
+		c(S.1.m_Elephant_edge_means,
+		A.H.i_Elephant_edge_means,
+		A.L.i_Elephant_edge_means), 
+		col = 5
+		)
+
+points(c(rowSums(S.1.m_Horse[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.H.i_Horse[,c("SINE2_MIR", "LINE_L2")]),
+		rowSums(A.L.i_Horse[,c("SINE2_MIR", "LINE_L2")])),
+		c(S.1.m_Horse_edge_means,
+		A.H.i_Horse_edge_means,
+		A.L.i_Horse_edge_means), 
+		col = 6
+		)
+
+
+# not too sure how much more time i can spend on this because it is not getting me anywhere
+# I htink we are saying are the edge lengths more similar in the mir l2 regions than in the other regions
 
 
 
@@ -487,14 +566,14 @@ q <- p + geom_violin(aes(y = edge_length, colour = "#3268FF"), alpha = 0.3)
 
 
 
+svd <- svd(as.matrix(Human.data[,2:length(Human.data)]))
 
 
 
+svd$v == Human.pca$rotations
 
-
-
-
-
+# v is rotations
+# 
 
 
 
